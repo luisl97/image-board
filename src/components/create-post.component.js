@@ -1,5 +1,7 @@
 import React, { Component } from 'react';
 import ImageUploader from 'react-images-upload';
+import axios from 'axios';
+import {storage} from '../firebase-config'
 
 export default class CreatePost extends Component {
 
@@ -9,7 +11,7 @@ export default class CreatePost extends Component {
         this.state = {
             post_title: '',
             post_description:'',
-            post_image : []
+            post_image: []
         };
 
 
@@ -36,21 +38,50 @@ export default class CreatePost extends Component {
         console.log("loading picture")
         this.setState({
             post_image: this.state.post_image.concat(picture)
-        })
+        });
+        
+        console.log(this.state.post_image)
     }
 
     onSubmit(e){
         e.preventDefault();
 
-        console.log('Post submitted:')
-        console.log(`Title: ${this.state.post_title}`)
-        console.log(`Description: ${this.state.post_description}`)
-        console.log(`Image: ${this.state.post_image}`)
+        const uploadTask = storage.ref(`images/${this.state.post_title}`).put(this.state.post_image)
+        uploadTask.on(
+            "state_changed",
+            error => {
+                console.log(error)
+            },
+            () => {
+                storage
+                    .ref("images")
+                    .child(this.state.post_title)
+                    .getDownloadURL()
+                    .then(url => {
+                         const newPost = {
+                            post_title: this.state.post_title,
+                            post_description: this.state.post_description,
+                            post_image_url: url
+                        }
+                        axios.post('http://localhost:4000/posts/upload', newPost)
+                            .then(res => console.log(res.data))
+                    })
+                
+                
 
-        this.setState({
-            post_title: '',
-            post_description:''
-        })
+                console.log('Post submitted:')
+                console.log(`Title: ${this.state.post_title}`)
+                console.log(`Description: ${this.state.post_description}`)
+                console.log(`Image: ${this.state.post_image}`)
+
+
+                this.setState({
+                    post_title: '',
+                    post_description: '',
+                    post_image: []
+                })
+            }
+        )
     }
 
     render() {
@@ -86,7 +117,7 @@ export default class CreatePost extends Component {
                         />
                     </div>
                     <div className="form-group">
-                        <input type="submit" value="Create Todo" className="btn btn-primary" />
+                        <input type="submit" value="Create Post" className="btn btn-primary" />
                     </div>
                 </form>
             </div>
